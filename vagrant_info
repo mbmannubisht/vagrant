@@ -1,0 +1,92 @@
+Steps to install Vagrant machine on Ubuntu 14.04.4 LTS
+
+Installing Virtualbox:
+
+ubuntu@ip-172-31-9-94:~$ sudo apt-get install virtualbox
+
+Installing Vagrant:
+
+ubuntu@ip-172-31-9-94:~$ sudo apt-get install vagrant
+
+ubuntu@ip-172-31-9-94:~$ sudo apt-get install virtualbox-dkms
+Getting vagrant  machine up:
+
+Vagrant can quickly deploy the development environment. Get the vagrant images from here. The following command will install precise32 box from the vagrant website. A 
+
+box is nothing more then a specially packaged image that can later be used to provision a server.
+
+ubuntu@ip-172-31-9-94:~$ vagrant box add precise32 http://files.vagrantup.com/precise32.box
+Configure Project:
+
+Create a root directory for your Project. Then create a vagrant file in this folder by calling 'vagrant init', which will be the central file for the project 
+
+configuration.
+
+ubuntu@ip-172-31-9-94:~$ mkdir vagrant_project
+ubuntu@ip-172-31-9-94:~$ cd vagrant_project
+ubuntu@ip-172-31-9-94:~$ vagrant init
+Edit the Vagrantfile in this directory and replace
+
+config.vm.box = "precise32"
+Start Environment:
+
+ubuntu@ip-172-31-9-94:~/vagrant_project$ sudo vagrant up
+
+Connect using SSH:
+
+ubuntu@ip-172-31-9-94:~/vagrant_project$ sudo vagrant ssh
+
+Puppet
+
+To use Puppet for provisioning, add this block in the Vagrantfile:
+
+config.vm.provision :puppet do |puppet|
+    puppet.manifests_path = 'puppet/manifests'
+    puppet.module_path    = 'puppet/modules'
+    puppet.options        = '--verbose'
+end
+
+
+So as you might have guessed, we’ll need a puppet directory with two sub-directories manifests and modules. Manifests will contain a default.pp file which tell Puppet 
+
+which modules to install and how:
+
+|   .Vagrantfile
+\---puppet
+    +---manifests
+    |       default.pp
+    \---modules
+
+
+ubuntu@ip-172-31-9-94:~/vagrant_project$ sudo vagrant up
+
+
+INSTALLING APACHE
+
+Create the following shell script and save it as bootstrap.sh in the same directory as your Vagrantfile:
+#!/usr/bin/env bash
+
+apt-get update
+apt-get install -y apache2
+# Installing MySQL and it's dependencies, Also, setting up root password for MySQL as it will prompt to enter the password during installation
+sudo debconf-set-selections <<< 'mysql-server-5.5 mysql-server/root_password password rootpass'
+sudo debconf-set-selections <<< 'mysql-server-5.5 mysql-server/root_password_again password rootpass'
+sudo apt-get -y install mysql-server libapache2-mod-auth-mysql php5-mysql
+
+if ! [ -L /var/www ]; then
+  rm -rf /var/www
+  ln -fs /vagrant /var/www
+fi
+
+Next, we configure Vagrant to run this shell script when setting up our machine.
+ config.vm.provision :shell, path: "bootstrap.sh"
+
+ run vagrant reload --provision, which will quickly restart your virtual machine, skipping the initial import step.
+
+
+
+
+
+
+
+
